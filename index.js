@@ -9,9 +9,11 @@ const VERSION_MSG_PREFIX = 'Version:'
 // main
 //
 
-function main (botPath) {
-  let fork = Pear.config.fork
-  let length = Pear.config.length
+async function main (botPath) {
+  const version = await Pear.versions()
+
+  let fork = version.app.fork
+  let length = version.app.length
   let workerVersion = `${fork}.${length}`
   let worker = startWorker(getLink(botPath, fork, length))
 
@@ -44,7 +46,7 @@ function getLink (botPath, fork, length) {
 }
 
 function startWorker (runLink) {
-  const pipe = Pear.worker.run(runLink, Pear.config.args)
+  const pipe = Pear.run(runLink, Pear.config.args)
   pipe.on('error', (err) => {
     if (err.code === 'ENOTCONN') return
     throw err
@@ -80,10 +82,10 @@ function run (botHandler) {
   const bot = botHandler(Pear.config.args)
   bot.catch(console.log)
 
-  const pipe = Pear.worker.pipe()
+  const pipe = Pear.pipe
   if (!pipe) return
 
-  pipe.write(`${VERSION_MSG_PREFIX} ${Pear.config.fork}.${Pear.config.length}`)
+  Pear.versions().then((version) => pipe.write(`${VERSION_MSG_PREFIX} ${version.app.fork}.${version.app.length}`))
   bot.then(() => pipe.write(READY_MSG))
   pipe.on('data', (data) => {
     if (data.toString() === CLOSE_MSG) {
