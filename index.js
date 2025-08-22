@@ -6,9 +6,10 @@ const debounceify = require('debounceify')
 // main
 //
 
-function main (botPath) {
-  let fork = Pear.config.fork
-  let length = Pear.config.length
+async function main (botPath) {
+  const version = await Pear.versions()
+  let fork = version.app.fork
+  let length = version.app.length
   let workerVersion = `${fork}.${length}`
 
   let updates = null
@@ -43,7 +44,7 @@ function startWorker (runLink, onClose) {
   const closedPr = promiseWithResolvers()
   const versionPr = promiseWithResolvers()
 
-  const pipe = Pear.worker.run(runLink, Pear.config.args)
+  const pipe = Pear.run(runLink, Pear.config.args)
   pipe.on('error', (err) => {
     console.log('Worker error', err)
     onClose()
@@ -106,7 +107,7 @@ function promiseWithResolvers () {
 //
 
 async function run (botHandler) {
-  const pipe = Pear.worker.pipe()
+  const pipe = Pear.pipe
   if (pipe) { // handle uncaught errors from botHandler
     process.on('uncaughtException', (err) => {
       pipe.write(JSON.stringify({ tag: 'error', data: `${err?.stack || err}` }) + '\n')
@@ -145,7 +146,9 @@ async function run (botHandler) {
       }
     }
   })
-  pipe.write(JSON.stringify({ tag: 'version', data: `${Pear.config.fork}.${Pear.config.length}` }) + '\n')
+
+  const version = await Pear.versions()
+  pipe.write(JSON.stringify({ tag: 'version', data: `${version.app.fork}.${version.app.length}` }) + '\n')
   pipe.write(JSON.stringify({ tag: 'ready' }) + '\n')
 }
 
